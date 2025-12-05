@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  backend:
+    image: pdfchat-backend-with-ollama
+    container_name: pdfchat-backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      OLLAMA_HOST: "http://host.docker.internal:11434"
+    volumes:
+      - ./backend/data:/app/backend/data
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pdfchat-frontend
+    environment:
+      FASTAPI_URL: "http://backend:8000"  # passes the variable your app.py expects
+    depends_on:
+      - backend
+    ports:
+      - "8501:8501"

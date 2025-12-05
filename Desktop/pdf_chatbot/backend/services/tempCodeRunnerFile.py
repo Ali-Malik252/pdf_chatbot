@@ -1,0 +1,1 @@
+from config import FAISS_FOLDER, CHUNK_FOLDER
