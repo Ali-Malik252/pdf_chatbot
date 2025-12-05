@@ -1,19 +1,20 @@
 # PDF Chatbot — RAG-Based Document Question Answering
 
-A smart chatbot system that enables users to upload PDF documents and ask questions based on their content.
-It uses a **Retrieval-Augmented Generation (RAG)** workflow to return **accurate and context-aware** answers directly sourced from the document.
+A smart chatbot system that enables users to **upload PDFs** and ask questions based on their content.
+It uses a **Retrieval-Augmented Generation (RAG)** workflow to return **factual** and **grounded directly in the PDF content**.
 
 ---
 
 ## Features
 
-✔ Upload PDF documents
-✔ Automatic text extraction
-✔ Intelligent text chunking
-✔ FAISS vector storage & retrieval
+✔ Upload any PDF document via UI
+✔ Automatic text extraction and intelligent chunking
+✔ Embeddings using Sentence Transformers
+✔ FAISS vector search for fast and accurate retrieval
 ✔ Ask natural-language questions
-✔ LLM-generated responses grounded in the document
-✔ Streamlit web UI + FastAPI backend
+✔ Context-aware answers powered by an LLM (Ollama)
+✔ Streamlit-based frontend and FastAPI backend
+✔ Fully containerized using Docker
 
 ---
 
@@ -33,7 +34,7 @@ Backend (FastAPI)
    │  ├── Embedding Generation
    │  └── FAISS Vector Search
    ▼
-LLM (Ollama)
+LLM (Ollama - llama3.1:8b)
    └── Final Answer Generation
 ```
 
@@ -44,23 +45,26 @@ LLM (Ollama)
 | Component   | Technology            |
 | ----------- | --------------------- |
 | Frontend UI | Streamlit             |
-| REST API    | FastAPI               |
+| API         | FastAPI               |
 | Vector DB   | FAISS                 |
 | Embeddings  | Sentence Transformers |
 | LLM         | Ollama                |
+| Packaging   | Docker                |
 | Language    | Python                |
 
 ---
 
 ## RAG Pipeline
 
-1️⃣ User uploads a PDF
-2️⃣ Extract full document text
+1️⃣ Upload a PDF 
+2️⃣ Extract full document text page wise
 3️⃣ Split text into overlapping chunks
-4️⃣ Convert chunks into vector embeddings
-5️⃣ Store them in a FAISS index
-6️⃣ On query → Retrieve relevant chunks
-7️⃣ Send them to the model to generate a grounded answer
+4️⃣ Convert chunks → vector embeddings
+5️⃣ Store in FAISS index
+6️⃣ Query → Retrieve relevant chunks
+7️⃣ Feed context into LLM → Final answer
+
+Result: **Trustworthy answers grounded in source content**
 
 ---
 
@@ -70,33 +74,56 @@ LLM (Ollama)
 pdf_chatbot/
 │
 ├── backend/
-│   ├── routes/
-│   │   └── ask_route.py
-│   ├── services/
-│   │   ├── extract_text.py
-│   │   ├── chunk_text.py
-│   │   ├── embeddings.py
-│   │   ├── faiss_store.py
-│   │   └── faiss_query.py
-│   └── data/
-│       ├── uploads/
-│       ├── chunks/
-│       └── faiss_indexes/
+│ ├── routes/
+│ │ └── ask_route.py # Main chatbot endpoint
+│ ├── services/
+│ │ ├── extract_text.py
+│ │ ├── chunk_text.py
+│ │ ├── embeddings.py
+│ │ ├── faiss_store.py
+│ │ └── faiss_query.py
+│ └── data/
+│ │  ├── uploads/
+│ │  ├── chunks/
+│ │  └── faiss_indexes/
+│ └── requirements.txt
 │
 ├── frontend/
-│   └── app.py
-│
-├── main.py
+│ ├── Dockerfile # Frontend container
+│ ├── requirements.txt
+│ └── app.py # Streamlit app
+│  
+├── main.py # FastAPI entrypoint
 ├── config.py
-├── requirements.txt
+├── Dockerfile # Backend container
+├── docker-compose.yml # Full stack
 └── README.md
 ```
 
 ---
 
-## How to Run Locally
+## How to Run
 
-### 1️⃣ Create Environment
+### Option 1 — Run using Docker (Recommended)
+
+Make sure Docker Desktop is running.
+
+```bash
+docker-compose up
+
+
+Once services are up:
+
+| Service      |           URL                 |
+| ------------ | ------------------------------|
+| Streamlit UI |   http://localhost:8501       |
+| FastAPI Root |   http://localhost:8000       |
+| API Docs     |   http://localhost:8000/docs  |
+
+
+## Option 2 — Run Locally (Dev Mode)
+
+### Create & activate virtual environment
 
 ```bash
 python -m venv venv
@@ -106,17 +133,26 @@ venv\Scripts\activate      # Windows
 
 ### 2️⃣ Install Dependencies
 
-```bash
-pip install -r requirements.txt
-```
+Backend:
 
-### 3️⃣ Start Backend (FastAPI)
+cd backend
+pip install -r requirements.txt
+cd ..
+
+
+Frontend:
+
+cd frontend
+pip install -r requirements.txt
+cd ..
+
+### Start Backend (FastAPI)
 
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-### 4️⃣ Start Frontend (Streamlit)
+### Start Frontend (Streamlit)
 
 ```bash
 streamlit run frontend/app.py
@@ -126,10 +162,20 @@ streamlit run frontend/app.py
 
 ## API Overview
 
-| Endpoint      | Method | Purpose                                     |
-| ------------- | ------ | ------------------------------------------- |
-| `/upload-doc` | POST   | Upload & process PDF Documents              |
-| `/ask`        | POST   | Ask a question related to uploaded document |
+| Endpoint      | Method | Input               | Output                    | Description                     |
+| ------------- | ------ | ------------------- | ------------------------- | ------------------------------- |
+| `/upload-doc` | POST   | PDF file            | `doc_id`                  | Upload & process PDF Documents  |
+| `/ask`        | POST   | `{ doc_id, query }` | Answer + retrieved chunks | RAG-based QA                    |
+
+---
+
+## Models
+
+| Component         | Purpose                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| all-MiniLM-L6-v2  | Lightweight embedding model for CPU-friendly semantic similarity |
+| FAISS IndexFlatL2 | Efficient vector search based on cosine similarity               |
+| llama3.1:8b model | Query + retrieved context used to generate final grounded answer |
 
 ---
 
